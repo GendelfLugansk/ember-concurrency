@@ -28,7 +28,7 @@ const Scheduler = Ember.Object.extend({
     let seen = [];
     this.spliceTaskInstances(reason, this.activeTaskInstances, 0, this.activeTaskInstances.length, seen);
     this.spliceTaskInstances(reason, this.queuedTaskInstances, 0, this.queuedTaskInstances.length, seen);
-    flushTaskCounts(seen);
+    Ember.run.next(null, flushTaskCounts, seen);
   },
 
   spliceTaskInstances(cancelReason, taskInstances, index, count, seen) {

@@ -24,3 +24,5 @@ deploy.sh
 .vscode
 tests/dummy/public/api
 
+# JetBrains IDE's
+.idea
