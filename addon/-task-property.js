@@ -4,15 +4,30 @@ import { addListener } from '@ember/object/events';
 import EmberObject from '@ember/object';
 import { getOwner } from '@ember/application';
 import Ember from 'ember';
-import { default as TaskInstance, getRunningInstance } from './-task-instance';
-import { PERFORM_TYPE_DEFAULT, PERFORM_TYPE_UNLINKED, PERFORM_TYPE_LINKED } from './-task-instance';
+import {
+  default as TaskInstance,
+  getRunningInstance
+} from './-task-instance';
+import {
+  PERFORM_TYPE_DEFAULT,
+  PERFORM_TYPE_UNLINKED,
+  PERFORM_TYPE_LINKED
+} from './-task-instance';
 import TaskStateMixin from './-task-state-mixin';
 import { TaskGroup } from './-task-group';
-import { propertyModifiers, resolveScheduler } from './-property-modifiers-mixin';
-import { objectAssign, INVOKE, _cleanupOnDestroy, _ComputedProperty } from './utils';
+import {
+  propertyModifiers,
+  resolveScheduler
+} from './-property-modifiers-mixin';
+import {
+  objectAssign,
+  INVOKE,
+  _cleanupOnDestroy,
+  _ComputedProperty
+} from './utils';
 import EncapsulatedTask from './-encapsulated-task';
 
-const PerformProxy = Ember.Object.extend({
+const PerformProxy = EmberObject.extend({
   _task: null,
   _performType: null,
   _linkedObject: null,
@@ -338,6 +353,12 @@ export const Task = EmberObject.extend(TaskStateMixin, {
    * @memberof Task
    * @param {*} arg* - args to pass to the task function
    * @instance
+   *
+   * @fires TaskInstance#TASK_NAME:started
+   * @fires TaskInstance#TASK_NAME:succeeded
+   * @fires TaskInstance#TASK_NAME:errored
+   * @fires TaskInstance#TASK_NAME:canceled
+   *
    */
   perform(...args) {
     return this._performShared(args, PERFORM_TYPE_DEFAULT, null);
@@ -352,6 +373,7 @@ export const Task = EmberObject.extend(TaskStateMixin, {
       owner: this.context,
       task: this,
       _debug: this._debug,
+      _hasEnabledEvents: this._hasEnabledEvents,
       _origin: this,
       _performType: performType,
     });
@@ -403,6 +425,7 @@ export function TaskProperty(taskFn) {
       _scheduler: resolveScheduler(tp, this, TaskGroup),
       _propertyName,
       _debug: tp._debug,
+      _hasEnabledEvents: tp._hasEnabledEvents
     });
   });
 
@@ -570,6 +593,28 @@ objectAssign(TaskProperty.prototype, propertyModifiers, {
    * @method group
    * @memberof TaskProperty
    * @param {String} groupPath A path to the TaskGroup property
+   * @instance
+   */
+
+  /**
+   * Activates lifecycle events, allowing Evented host objects to react to task state
+   * changes.
+   *
+   * ```js
+   *
+   * export default Component.extend({
+   *   uploadTask: task(function* (file) {
+   *     // ... file upload stuff
+   *   }).evented(),
+   *
+   *   uploadedStarted: on('uploadTask:started', function(taskInstance) {
+   *     this.get('analytics').track("User Photo: upload started");
+   *   }),
+   * });
+   * ```
+   *
+   * @method evented
+   * @memberof TaskProperty
    * @instance
    */
 
