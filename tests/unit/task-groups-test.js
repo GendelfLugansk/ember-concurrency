@@ -87,7 +87,7 @@ module('Unit: task groups', function() {
     });
   });
 
-  test("task groups can be canceled", function(assert) {
+  test("task groups can be canceled", async function(assert) {
     assert.expect(18);
 
     let deferA, deferB;
@@ -123,8 +123,57 @@ module('Unit: task groups', function() {
 
     run(tg, 'cancelAll');
 
+    await new RSVP.Promise(function (resolve) {
+      run.next(null, resolve);
+    });
+
     suffix = "after tg.cancelAll()";
     assertStates(assert, tg,    false, false, true, suffix);
+    assertStates(assert, taskA, false, false, true, suffix);
+    assertStates(assert, taskB, false, false, true, suffix);
+  });
+
+  test("task groups return false for isRunning when task is cancelled", async function (assert) {
+    assert.expect(18);
+
+    let deferA, deferB;
+    let Obj = EmberObject.extend({
+      tg: taskGroup().drop(),
+
+      taskA: task(function* () {
+        deferA = RSVP.defer();
+        yield deferA.promise;
+      }).group('tg'),
+
+      taskB: task(function* () {
+        deferB = RSVP.defer();
+        yield deferB.promise;
+      }).group('tg'),
+    });
+
+    let obj, taskA, taskB, suffix, tg;
+    run(() => {
+      obj = Obj.create();
+      tg = obj.get('tg');
+      taskA = obj.get('taskA');
+      taskB = obj.get('taskB');
+      taskA.perform();
+    });
+
+    suffix = "after first run loop";
+
+    assertStates(assert, tg, true, false, false, suffix);
+    assertStates(assert, taskA, true, false, false, suffix);
+    assertStates(assert, taskB, false, false, true, suffix);
+
+    run(taskA, 'cancelAll');
+
+    await new RSVP.Promise(function (resolve) {
+      run.next(null, resolve);
+    });
+
+    suffix = "after taskA.cancelAll()";
+    assertStates(assert, tg, false, false, true, suffix);
     assertStates(assert, taskA, false, false, true, suffix);
     assertStates(assert, taskB, false, false, true, suffix);
   });
